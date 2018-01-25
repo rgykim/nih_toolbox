@@ -67,9 +67,11 @@ def main():
 		['nih_cardsort_fullycorr_tscore', 'Assessment Scores', 19, 7],
 		['nih_audverbal_raw', 'Assessment Scores', 4, 12],
 		['nih_audverbal_itemcount', 'Assessment Scores', 8, 12],
-		['nih_audverbal_ravltt1', 'Assessment Data', 10, 201],
-		['nih_audverbal_ravltt2', 'Assessment Data', 10, 202],
-		['nih_audverbal_ravltt3', 'Assessment Data', 10, 203],
+		# RAVLTT1, RAVLTT2, and RALTT3 have variable cell coordinates based on subject performance
+		# these values will be appended later at the end during output generation
+		# ['nih_audverbal_ravltt1', 'Assessment Data', 10, 2XX],
+		# ['nih_audverbal_ravltt2', 'Assessment Data', 10, 2XX],
+		# ['nih_audverbal_raltt3', 'Assessment Data', 10, 2XX],
 		['nih_oralsym_raw', 'Assessment Scores', 4, 13],
 		['nih_oralsym_itemcount', 'Assessment Scores', 8, 13],
 		['nih_cogfluid_uncorr', 'Assessment Scores', 17, 8],
@@ -98,7 +100,7 @@ def main():
 			if j.lower() in f.lower():
 				subjList[idx][i+1] = f
 
-	for subj in subjList:
+	for subj in subjList:	# check for and exclude any subjects that do not have all three NIH Toolbox files
 		if any(x is None for x in subj):
 			subjList.delete(subj)
 			continue
@@ -106,8 +108,15 @@ def main():
 		fileDict_values = [df_data, df_scores, df_reg] = [pd.read_csv(x, header=None) for x in subj[1: ]]	# header=None used to offset row indices
 		fileDict = dict(zip(fileDict_keys, fileDict_values))
 
+		y = df_data.loc[df_data[8] == 'RAVLT_TITLE'].index[0]	# RAVLTT1, RAVLTT2, and RALTT3 search
+		reference_ravltt = [
+			['nih_audverbal_ravltt1', 'Assessment Data', 10, y + 1],
+			['nih_audverbal_ravltt2', 'Assessment Data', 10, y + 2],
+			['nih_audverbal_raltt3', 'Assessment Data', 10, y + 3]
+			]
+
 		df_output = pd.DataFrame(np.nan, index=[0], columns=templateHeader)
-		for row in reference:
+		for row in reference + reference_ravltt:
 			df_output.ix[0, row[0]] = fileDict[row[1]].iat[row[3], row[2]]
 			# df_output.set_value(0, row[0], fileDict[row[1]].iat[row[3], row[2]])		# set_value() deprecated in #17739 (https://github.com/pandas-dev/pandas/pull/17739)
 
@@ -119,6 +128,7 @@ if __name__ == '__main__':
 	template = op.join(scriptDir, 'AirBrainAndBehavior_ImportTemplate_2017-10-26_NIHTemplate.csv')
 
 	mainDir = '/Volumes/projects_herting/ABB_Project/Subjects/'
+	# mainDir = 'Z:/ABB_Project/Subjects/'
 	os.chdir(mainDir)
 
 	outDir = 'NIH Redcap'
